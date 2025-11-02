@@ -12,7 +12,7 @@ if (!process.env.DEEPSEEK_API_KEY) {
 }
 
 const openai = new OpenAI({
-    baseURL: 'https://api.deepseek.com',
+    baseURL: process.env.DEEPSEEK_API_BASE_URL,
     apiKey: process.env.DEEPSEEK_API_KEY
 });
 
