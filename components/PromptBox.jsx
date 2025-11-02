@@ -18,24 +18,32 @@ const PromptBox = ({setIsLoading, isLoading}) => {
     }
 
     const sendPrompt = async (e)=>{
-        const promptCopy = prompt;
+        const promptCopy = prompt.trim();
 
         try {
             e.preventDefault();
             if(!user) return toast.error('Login to send message');
             if(isLoading) return toast.error('Wait for the previous prompt response');
+            if(!promptCopy) return toast.error('Please enter a message');
+            if(!selectedChat?._id) {
+                console.error('No chat selected or invalid chat:', selectedChat);
+                return toast.error('No chat selected');
+            }
+            if(!selectedChat.messages) {
+                console.error('Chat messages array is missing:', selectedChat);
+                selectedChat.messages = [];
+            }
 
             setIsLoading(true)
             setPrompt("")
 
             const userPrompt = {
                 role: "user",
-                content: prompt,
+                content: promptCopy,
                 timestamp: Date.now(),
             }
 
             // saving user prompt in chats array
-
             setChats((prevChats)=> prevChats.map((chat)=> chat._id === selectedChat._id ?
              {
                 ...chat,
@@ -43,21 +51,27 @@ const PromptBox = ({setIsLoading, isLoading}) => {
             }: chat
         ))
         // saving user prompt in selected chat
-
         setSelectedChat((prev)=> ({
             ...prev,
             messages: [...prev.messages, userPrompt]
         }))
 
+        console.log('Sending request to API with:', {
+            chatId: selectedChat._id,
+            prompt: promptCopy
+        });
+        
         const {data} = await axios.post('/api/chat/ai', {
             chatId: selectedChat._id,
-            prompt
+            prompt: promptCopy
         })
+        
+        console.log('API Response:', data);
 
         if(data.success){
             setChats((prevChats)=>prevChats.map((chat)=>chat._id === selectedChat._id ? {...chat, messages: [...chat.messages, data.data]} : chat))
 
-            const message = data.data.content;
+            const message = data.data.content || "";
             const messageTokens = message.split(" ");
             let assistantMessage = {
                 role: 'assistant',
@@ -81,15 +95,15 @@ const PromptBox = ({setIsLoading, isLoading}) => {
                     return {...prev, messages: updatedMessages}
                 })
                }, i * 100)
-                
             }
         }else{
-            toast.error(data.message);
+            toast.error(data.message || 'Failed to send message');
             setPrompt(promptCopy);
         }
 
         } catch (error) {
-            toast.error(error.message);
+            console.error('Error sending prompt:', error);
+            toast.error(error.response?.data?.message || error.message || 'Failed to send message');
             setPrompt(promptCopy);
         } finally {
             setIsLoading(false);
@@ -120,8 +134,12 @@ const PromptBox = ({setIsLoading, isLoading}) => {
 
             <div className='flex items-center gap-2'>
             <Image className='w-4 cursor-pointer' src={assets.pin_icon} alt=''/>
-            <button className={`${prompt ? "bg-primary" : "bg-[#71717a]"} rounded-full p-2 cursor-pointer`}>
-                <Image className='w-3.5 aspect-square' src={prompt ? assets.arrow_icon : assets.arrow_icon_dull} alt=''/>
+            <button 
+                type="submit"
+                disabled={!prompt.trim() || isLoading}
+                className={`${prompt.trim() && !isLoading ? "bg-primary" : "bg-[#71717a]"} rounded-full p-2 ${prompt.trim() && !isLoading ? "cursor-pointer" : "cursor-not-allowed"} transition-colors`}
+            >
+                <Image className='w-3.5 aspect-square' src={prompt.trim() && !isLoading ? assets.arrow_icon : assets.arrow_icon_dull} alt=''/>
             </button>
             </div>
         </div>

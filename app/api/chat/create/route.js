@@ -8,10 +8,13 @@ export async function POST(req){
         const { userId } = getAuth(req)
 
         if(!userId){
-            return NextResponse.json({success: false, message: "User not authenticated",})
+            return NextResponse.json({
+                success: false, 
+                message: "User not authenticated"
+            }, { status: 401 })
         }
+        
         // Prepare the chat data to be saved in the database
-
         const chatData = {
             userId,
             messages: [],
@@ -20,11 +23,19 @@ export async function POST(req){
 
         // Connect to the database and create a new chat
         await connectDB();
-        await Chat.create(chatData);
+        const newChat = await Chat.create(chatData);
 
-        return NextResponse.json({ success: true, message: "Chat created" })
+        return NextResponse.json({ 
+            success: true, 
+            message: "Chat created",
+            data: newChat 
+        })
 
     } catch (error) {
-        return NextResponse.json({ success: false, error: error.message });
+        console.error('Error creating chat:', error);
+        return NextResponse.json({ 
+            success: false, 
+            message: error.message || "Failed to create chat" 
+        }, { status: 500 });
     }
 }

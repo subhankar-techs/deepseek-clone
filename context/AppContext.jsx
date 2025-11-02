@@ -22,20 +22,36 @@ export const AppContextProvider = ({children})=>{
             if(!user) return null;
 
             const token = await getToken();
+            if(!token) {
+                toast.error('Authentication failed');
+                return null;
+            }
 
-            await axios.post('/api/chat/create', {}, {headers:{
+            const response = await axios.post('/api/chat/create', {}, {headers:{
                 Authorization: `Bearer ${token}`
             }})
 
-            fetchUsersChats();
+            if(response.data.success) {
+                fetchUsersChats();
+            } else {
+                toast.error(response.data.message || 'Failed to create chat');
+            }
         } catch (error) {
-            toast.error(error.message)
+            console.error('Error creating chat:', error);
+            toast.error(error.response?.data?.message || error.message || 'Failed to create chat')
         }
     }
 
     const fetchUsersChats = async ()=>{
         try {
+            if(!user) return;
+            
             const token = await getToken();
+            if(!token) {
+                toast.error('Authentication failed');
+                return;
+            }
+            
             const {data} = await axios.get('/api/chat/get', {headers:{
                 Authorization: `Bearer ${token}`
             }})
@@ -46,7 +62,7 @@ export const AppContextProvider = ({children})=>{
                  // If the user has no chats, create one
                  if(data.data.length === 0){
                     await createNewChat();
-                    return fetchUsersChats();
+                    return;
                  }else{
                     // sort chats by updated date
                     data.data.sort((a, b)=> new Date(b.updatedAt) - new Date(a.updatedAt));
@@ -56,10 +72,11 @@ export const AppContextProvider = ({children})=>{
                      console.log(data.data[0]);
                  }
             }else{
-                toast.error(data.message)
+                toast.error(data.message || 'Failed to fetch chats')
             }
         } catch (error) {
-            toast.error(error.message)
+            console.error('Error fetching chats:', error);
+            toast.error(error.response?.data?.message || error.message || 'Failed to fetch chats')
         }
     }
 

@@ -11,15 +11,19 @@ export async function GET(req){
             return NextResponse.json({
               success: false,
               message: "User not authenticated",
-            });
+            }, { status: 401 });
           }
 
           // Connect to the database and fetch all chats for the user
           await connectDB();
-          const data = await Chat.find({userId});
+          const data = await Chat.find({userId}).sort({ updatedAt: -1 });
 
           return NextResponse.json({ success: true, data })
     } catch (error) {
-        return NextResponse.json({ success: false, error: error.message });
+        console.error('Error fetching chats:', error);
+        return NextResponse.json({ 
+            success: false, 
+            message: error.message || "Failed to fetch chats" 
+        }, { status: 500 });
     }
 }
